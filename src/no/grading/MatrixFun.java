@@ -25,7 +25,7 @@ public class MatrixFun {
                 "01 70 54 71 83 51 54 69 16 92 33 48 61 43 52 01 89 19 67 48";
     }
 
-    private String theFourCells = null;
+    private String theHighestProductCells = null;
 
     private long maxSoFar = Long.MIN_VALUE;
 
@@ -62,17 +62,17 @@ public class MatrixFun {
             for (int column = 0; column <= lastColumn; column++) {
 
                 if (column <= lastColumn - sequenceLength + 1) {
-                    computeRightAndUpdateHighest(matrix, row, column);
+                    computeAlongDirectionAndUpdateHighest(Direction.Right, matrix, row, column);
 
                     if (row + 1 >= sequenceLength)
-                        computeDiagonallyUpRightAndUpdateHighest(matrix, row, column);
+                        computeAlongDirectionAndUpdateHighest(Direction.DiagonallyUpRight, matrix, row, column);
                 }
 
                 if (row <= lastRow - sequenceLength + 1) {
-                    computeDownAndUpdateHighest(matrix, row, column);
+                    computeAlongDirectionAndUpdateHighest(Direction.Down, matrix, row, column);
 
                     if (column <= lastColumn - sequenceLength + 1)
-                        computeDiagonallyDownRightAndUpdateHighest(matrix, row, column);
+                        computeAlongDirectionAndUpdateHighest(Direction.DiagonallyDownRight, matrix, row, column);
                 }
             }
     }
@@ -81,7 +81,9 @@ public class MatrixFun {
         var prefix = "Not computable when the ";
         var postfix = " is less than " + sequenceLength;
 
-        if (lastInitialColumn + 1 < sequenceLength) {
+        if (sequenceLength < 1) {
+            throw new IncomputableException(prefix + "sequenceLength is less than 1");
+        } else if (lastInitialColumn + 1 < sequenceLength) {
             if (lastRow + 1 < sequenceLength)
                 throw new IncomputableException(prefix + "column count (and row count for that matter)" + postfix);
             throw new IncomputableException(prefix + "column count" + postfix);
@@ -91,7 +93,7 @@ public class MatrixFun {
     }
 
     private void displayResult() {
-        System.out.println("Max: " + maxSoFar + " = " + theFourCells);
+        System.out.println("Max: " + maxSoFar + " = " + theHighestProductCells);
     }
 
     /**
@@ -133,104 +135,104 @@ public class MatrixFun {
         return maxColumnCount;
     }
 
-    /**
-     * Computes the product of itself and its three closest neighbours on the right (in the same row),
-     * i.e. matrix[row][column] * matrix[row][column + 1] * matrix[row][column + 2] * matrix[row][column + 3]
-     * @param matrix The input matrix
-     * @param row Current row
-     * @param column Current column
-     */
-    private void computeRightAndUpdateHighest(int[][] matrix, int row, int column) {
-        var sequence = new MatrixElementSequence(new int[][]{ {0, 1}, {0, 2}, {0, 3} }, matrix, row, column);
-        computeProductAndUpdateHighest("right/row/horizontal", sequence);
+    private void computeAlongDirectionAndUpdateHighest(Direction direction, int[][] matrix, int row, int column) {
+        var sequence = new MatrixElementSequence(generateOffsets(direction), matrix, row, column);
+        computeProductAndUpdateHighest(direction, sequence);
     }
 
     /**
-     * Computes the product of itself and its three closest neighbours diagonally up and right,
-     * i.e. matrix[row][column] * matrix[row - 1][column + 1] * matrix[row - 2][column + 2] * matrix[row - 3][column + 3]
-     * @param matrix The input matrix
-     * @param row Current row
-     * @param column Current column
+     * Generate offsets according to direction and sequenceLength
+     * @param direction Direction (enum)
+     * @return The offsets
      */
-    private void computeDiagonallyUpRightAndUpdateHighest(int[][] matrix, int row, int column) {
-        var sequence = new MatrixElementSequence(new int[][]{ {-1, 1}, {-2, 2}, {-3, 3} }, matrix, row, column);
-        computeProductAndUpdateHighest("diagonallyUpRight", sequence);
-    }
+    private int[][] generateOffsets(Direction direction) {
+        var offsets = new int[sequenceLength - 1][2];
 
-    /**
-     * Computes the product of itself and its three closest neighbours diagonally down and right,
-     * i.e. matrix[row][column] * matrix[row + 1][column + 1] * matrix[row + 2][column + 2] * matrix[row + 3][column + 3]
-     * @param matrix The input matrix
-     * @param row Current row
-     * @param column Current column
-     */
-    private void computeDiagonallyDownRightAndUpdateHighest(int[][] matrix, int row, int column) {
-        var sequence = new MatrixElementSequence(new int[][]{ {1, 1}, {2, 2}, {3, 3} }, matrix, row, column);
-        computeProductAndUpdateHighest("diagonallyDownRight", sequence);
-    }
+        for (int i = 0; i < sequenceLength - 1; i++) {
+            switch (direction) {
+                case DiagonallyUpRight:
+                    offsets[i][0] = -(offsets[i][1] = (i + 1));
+                    break;
 
-    /**
-     * Computes the product of itself and its three closest neighbours down (in the same column),
-     * matrix[row][column] * matrix[row + 1][column] * matrix[row + 2][column] * matrix[row + 3][column]
-     * @param matrix The input matrix
-     * @param row Current row
-     * @param column Current column
-     */
-    private void computeDownAndUpdateHighest(int[][] matrix, int row, int column) {
-        var sequence = new MatrixElementSequence(new int[][]{ {1, 0}, {2, 0}, {3, 0} }, matrix, row, column);
-        computeProductAndUpdateHighest("down/column/vertical", sequence);
+                case DiagonallyDownRight:
+                    offsets[i][0] = (offsets[i][1] = (i + 1));
+                    break;
+
+                case Down:
+                    offsets[i][0] = (i + 1);
+                    break;
+
+                case Right:
+                    offsets[i][1] = (i + 1);
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        return offsets;
     }
 
     /**
      * Computes the product of itself (specified by row and column)
-     * and the three other matrix elements specified by offsets, i.e.
-     *   matrix [ row                ] [ col                ]
+     * and e.g. if the sequence length is 4, the three other matrix elements specified by offsets, i.e.
+     *   matrix [ row                 ] [ col                ]
      * * matrix [ row + offsets[0][0] ] [ col + offsets[0][1] ]
      * * matrix [ row + offsets[1][0] ] [ col + offsets[1][1] ]
      * * matrix [ row + offsets[2][0] ] [ col + offsets[2][1] ],
      * encapsulated in a MatrixElementSequence sequence,
      * plus updates highest so far.
-     * @param kind The kind of sequence you want to call it (in case it becomes the highest product)
+     * @param direction The kind of sequence you want to call it (in case it becomes the highest product)
      * @param sequence Wrapper object containing
      */
-    private void computeProductAndUpdateHighest(String kind, MatrixElementSequence sequence) {
+    private void computeProductAndUpdateHighest(Direction direction, MatrixElementSequence sequence) {
         int[][] matrix = sequence.matrix;
         int[][] offsets = sequence.offsets;
         int row = sequence.row;
         int column = sequence.column;
 
-        var product =  matrix [ row                 ] [ column                ]
-                    *  matrix [ row + offsets[0][0] ] [ column + offsets[0][1] ]
-                    *  matrix [ row + offsets[1][0] ] [ column + offsets[1][1] ]
-                    *  matrix [ row + offsets[2][0] ] [ column + offsets[2][1] ];
+        var product =  matrix[row][column];
+        for (int[] offset : offsets) product *= matrix[row + offset[0]][column + offset[1]];
 
         if (product > maxSoFar) {
             maxSoFar = product;
-            theFourCells = elaborateOnTheFourNumbers(kind, sequence);
+            theHighestProductCells = elaborateOnTheHighestProductNumbers(direction, sequence);
         }
     }
 
     /**
      * Get a description of what kind of sequence of elements and which
-     * @param kind The kind of sequence you want to call it (in case it becomes the highest product)
+     * @param direction The kind of sequence you want to call it (in case it becomes the highest product)
      * @param sequence The sequence of elements in the matrix
      * @return A human-readable description of what kind of sequence of elements and which
      */
-    private String elaborateOnTheFourNumbers(String kind, MatrixElementSequence sequence) {
+    private String elaborateOnTheHighestProductNumbers(Direction direction, MatrixElementSequence sequence) {
         int[][] matrix = sequence.matrix;
         int[][] offsets = sequence.offsets;
         int row = sequence.row;
         int column = sequence.column;
 
-        return              matrix [row               ] [column               ]
-                + " * " +   matrix [row + offsets[0][0]] [column + offsets[0][1]]
-                + " * " +   matrix [row + offsets[1][0]] [column + offsets[1][1]]
-                + " * " +   matrix [row + offsets[2][0]] [column + offsets[2][1]]
-                + " from " + kind
-                + ": matrix[" + (row                )  + "][" + (column                )    + "] "
-                + "* matrix[" + (row + offsets[0][0])  + "][" + (column + offsets[0][1])    + "] "
-                + "* matrix[" + (row + offsets[1][0])  + "][" + (column + offsets[1][1])    + "] "
-                + "* matrix[" + (row + offsets[2][0])  + "][" + (column + offsets[2][1])    + "]";
+        StringBuilder elaborationBuilder = new StringBuilder("" + matrix[row][column]);
+        for (int i = 0; i < sequenceLength - 1; i++)
+            elaborationBuilder.append(" * ").append(matrix[row + offsets[i][0]][column + offsets[i][1]]);
+
+        elaborationBuilder  .append(" from ")
+            .append(direction)
+            .append(": matrix[").append(row).append("][").append(column).append("] ");
+
+        for (int i = 0; i < sequenceLength - 1; i++)
+            elaborationBuilder.append("* matrix[").append(row + offsets[i][0]).append("][")
+                .append(column + offsets[i][1]).append("] ");
+
+        return elaborationBuilder.toString();
+    }
+
+    enum Direction {
+        Right,
+        DiagonallyUpRight,
+        DiagonallyDownRight,
+        Down
     }
 
     static class MatrixData {
