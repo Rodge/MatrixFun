@@ -28,6 +28,13 @@ public class MatrixFun {
     private String theFourCells = null;
 
     private long maxSoFar = Long.MIN_VALUE;
+
+    public MatrixFun(int sequenceLength) { this.sequenceLength = sequenceLength; }
+    public MatrixFun() { this.sequenceLength = defaultSequenceLength; }
+
+    private final static int defaultSequenceLength = 4;
+    private final int sequenceLength;
+
     public long getMaxSoFar() {
         return maxSoFar;
     }
@@ -49,7 +56,7 @@ public class MatrixFun {
         var lastInitialColumn = data.columnCount - 4; // 16 (looking at columns 16, 17, 18, 19) for an m by 20 matrix
         var lastRow = data.rowCount - 1;
 
-        handleInvalidDimensions(lastInitialColumn, lastRow);
+        handleInvalidDimensionsOrSequenceLength(lastColumn, lastRow);
 
         for (int row = 0; row <= lastRow ; row++)
             for (int column = 0; column <= lastInitialColumn; column++) {
@@ -66,13 +73,16 @@ public class MatrixFun {
             }
     }
 
-    private void handleInvalidDimensions(int lastInitialColumn, int lastRow) throws IncomputableException {
-        if (lastInitialColumn < 3) {
-            if (lastRow < 3)
-                throw new IncomputableException("Not computable when the column count (and row count for that matter) is less than 4");
-            throw new IncomputableException("Not computable when the column count is less than 4");
-        } else if (lastRow < 3) {
-            throw new IncomputableException("Not computable when the row count is less than 4");
+    private void handleInvalidDimensionsOrSequenceLength(int lastInitialColumn, int lastRow) throws IncomputableException {
+        var prefix = "Not computable when the ";
+        var postfix = " is less than " + sequenceLength;
+
+        if (lastInitialColumn + 1 < sequenceLength) {
+            if (lastRow + 1 < sequenceLength)
+                throw new IncomputableException(prefix + "column count (and row count for that matter)" + postfix);
+            throw new IncomputableException(prefix + "column count" + postfix);
+        } else if (lastRow + 1 < sequenceLength) {
+            throw new IncomputableException(prefix + "row count" + postfix);
         }
     }
 
@@ -185,7 +195,7 @@ public class MatrixFun {
         int row = sequence.row;
         int column = sequence.column;
 
-        var product =  matrix [ row                ] [ column                ]
+        var product =  matrix [ row                 ] [ column                ]
                     *  matrix [ row + offsets[0][0] ] [ column + offsets[0][1] ]
                     *  matrix [ row + offsets[1][0] ] [ column + offsets[1][1] ]
                     *  matrix [ row + offsets[2][0] ] [ column + offsets[2][1] ];
