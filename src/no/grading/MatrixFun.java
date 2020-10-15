@@ -52,23 +52,27 @@ public class MatrixFun {
 
     public void computeAndUpdateHighest(String text) throws IncomputableException {
         var data = populateMatrixFromText(text);
-        var matrix = data.matrix; // 20 for a 20 by n matrix
-        var lastInitialColumn = data.columnCount - 4; // 16 (looking at columns 16, 17, 18, 19) for an m by 20 matrix
+        var matrix = data.matrix;
+        var lastColumn = data.columnCount - 1;
         var lastRow = data.rowCount - 1;
 
         handleInvalidDimensionsOrSequenceLength(lastColumn, lastRow);
 
-        for (int row = 0; row <= lastRow ; row++)
-            for (int column = 0; column <= lastInitialColumn; column++) {
-                computeRightAndUpdateHighest(matrix, row, column);
+        for (int row = 0; row <= lastRow; row++)
+            for (int column = 0; column <= lastColumn; column++) {
 
-                if (row >= 3)
-                    computeDiagonallyUpRightAndUpdateHighest(matrix, row, column);
+                if (column <= lastColumn - sequenceLength + 1) {
+                    computeRightAndUpdateHighest(matrix, row, column);
 
-                if (row <= lastInitialColumn) { /* lastInitialColumn is also the last initial row when computing either
-                diagonals down to the right or simply the four in a column downwards... */
-                    computeDiagonallyDownRightAndUpdateHighest(matrix, row, column);
+                    if (row + 1 >= sequenceLength)
+                        computeDiagonallyUpRightAndUpdateHighest(matrix, row, column);
+                }
+
+                if (row <= lastRow - sequenceLength + 1) {
                     computeDownAndUpdateHighest(matrix, row, column);
+
+                    if (column <= lastColumn - sequenceLength + 1)
+                        computeDiagonallyDownRightAndUpdateHighest(matrix, row, column);
                 }
             }
     }
